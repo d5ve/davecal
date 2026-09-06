@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MonthView: View {
     @Environment(CalendarStore.self) private var store
+    @Environment(\.openWindow) private var openWindow
     @State private var month: Date = Calendar.current.startOfMonth(for: .now)
 
     private let calendar = Calendar.current
@@ -29,6 +30,12 @@ struct MonthView: View {
                 .font(.system(size: 32, weight: .bold))
                 .padding(.leading, 12)
             Spacer()
+            Button("New Event") {
+                let today = calendar.startOfDay(for: .now)
+                let day = calendar.isDate(today, equalTo: month, toGranularity: .month) ? today : month
+                openWindow(id: "event", value: EventRequest.newEvent(on: day))
+            }
+            .keyboardShortcut("n")
             if store.denied {
                 Text("Calendar access denied. Enable it in System Settings > Privacy & Security > Calendars.")
                     .font(.system(size: 16, weight: .semibold))
@@ -61,7 +68,9 @@ struct MonthView: View {
                     day: day,
                     inMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
                     isToday: day == today,
-                    events: byDay[day] ?? []
+                    events: byDay[day] ?? [],
+                    openNew: { openWindow(id: "event", value: EventRequest.newEvent(on: day)) },
+                    openEvent: { openWindow(id: "event", value: EventRequest.existing($0)) }
                 )
                 .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             }
@@ -102,6 +111,8 @@ struct DayCell: View {
     let inMonth: Bool
     let isToday: Bool
     let events: [EKEvent]
+    let openNew: () -> Void
+    let openEvent: (EKEvent) -> Void
 
     private let maxShown = 5
 
@@ -112,6 +123,8 @@ struct DayCell: View {
                 .foregroundStyle(isToday ? .white : (inMonth ? .primary : .secondary))
             ForEach(Array(events.prefix(maxShown).enumerated()), id: \.offset) { _, event in
                 EventChip(event: event, onToday: isToday)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { openEvent(event) }
             }
             if events.count > maxShown {
                 Text("+\(events.count - maxShown) more")
@@ -124,6 +137,8 @@ struct DayCell: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(background)
         .clipped()
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { openNew() }
     }
 
     private var background: Color {

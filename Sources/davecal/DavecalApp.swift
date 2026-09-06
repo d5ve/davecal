@@ -9,5 +9,13 @@ struct DavecalApp: App {
             ContentView()
                 .environment(store)
         }
+
+        WindowGroup("Event", id: "event", for: EventRequest.self) { $request in
+            if let request {
+                EventDetailView(request: request)
+                    .environment(store)
+            }
+        }
+        .defaultSize(width: 560, height: 640)
     }
 }
