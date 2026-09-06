@@ -10,6 +10,16 @@ final class CalendarStore {
     var authorized = false
     var denied = false
     var events: [EKEvent] = []
+    var calendars: [EKCalendar] = []
+
+    /// Calendars switched off in the sidebar. Stored as sets of identifiers so
+    /// everything defaults to on.
+    var hiddenIDs: Set<String> = CalendarStore.loadSet("hiddenCalendars") {
+        didSet { CalendarStore.saveSet(hiddenIDs, "hiddenCalendars") }
+    }
+    var disabledIDs: Set<String> = CalendarStore.loadSet("disabledCalendars") {
+        didSet { CalendarStore.saveSet(disabledIDs, "disabledCalendars") }
+    }
 
     private var loadedRange: (start: Date, end: Date)?
 
@@ -44,10 +54,45 @@ final class CalendarStore {
     }
 
     func reload() {
-        guard authorized, let range = loadedRange else { return }
+        guard authorized else { return }
+        calendars = eventStore.calendars(for: .event).sorted {
+            ($0.source.title, $0.title) < ($1.source.title, $1.title)
+        }
+        guard let range = loadedRange else { return }
         let predicate = eventStore.predicateForEvents(
             withStart: range.start, end: range.end, calendars: nil)
         events = eventStore.events(matching: predicate)
+    }
+
+    func isVisible(_ calendar: EKCalendar) -> Bool { !hiddenIDs.contains(calendar.calendarIdentifier) }
+    func isEnabled(_ calendar: EKCalendar) -> Bool { !disabledIDs.contains(calendar.calendarIdentifier) }
+
+    func setVisible(_ calendar: EKCalendar, _ on: Bool) {
+        if on { hiddenIDs.remove(calendar.calendarIdentifier) } else { hiddenIDs.insert(calendar.calendarIdentifier) }
+    }
+    func setEnabled(_ calendar: EKCalendar, _ on: Bool) {
+        if on { disabledIDs.remove(calendar.calendarIdentifier) } else { disabledIDs.insert(calendar.calendarIdentifier) }
+    }
+
+    /// Calendars grouped by account, in account then calendar name order.
+    var calendarsByAccount: [(account: String, calendars: [EKCalendar])] {
+        var groups: [(String, [EKCalendar])] = []
+        for cal in calendars {
+            let name = cal.source.title
+            if let i = groups.firstIndex(where: { $0.0 == name }) {
+                groups[i].1.append(cal)
+            } else {
+                groups.append((name, [cal]))
+            }
+        }
+        return groups.map { (account: $0.0, calendars: $0.1) }
+    }
+
+    private static func loadSet(_ key: String) -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+    }
+    private static func saveSet(_ set: Set<String>, _ key: String) {
+        UserDefaults.standard.set(Array(set).sorted(), forKey: key)
     }
 
     /// Events keyed by the start of each day they touch. A multi-day event
@@ -55,6 +100,7 @@ final class CalendarStore {
     func eventsByDay(calendar: Calendar) -> [Date: [EKEvent]] {
         var result: [Date: [EKEvent]] = [:]
         for event in events {
+            if let id = event.calendar?.calendarIdentifier, hiddenIDs.contains(id) { continue }
             guard let start = event.startDate, let end = event.endDate else { continue }
             let firstDay = calendar.startOfDay(for: start)
             // End dates are exclusive (an all-day event ends at 00:00 the next
