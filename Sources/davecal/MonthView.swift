@@ -156,16 +156,22 @@ struct EventChip: View {
         return .gray
     }
 
+    /// Runs across more than one day, so it shows up in several cells.
+    private var isMultiDay: Bool {
+        guard let start = event.startDate, let end = event.endDate else { return false }
+        return !Calendar.current.isDate(start, inSameDayAs: end.addingTimeInterval(-1))
+    }
+
     var body: some View {
         if event.isAllDay {
             Text(event.title ?? "")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: isMultiDay ? 11 : 15, weight: .semibold))
                 .lineLimit(1)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 5)
-                .padding(.vertical, 2)
+                .padding(.vertical, isMultiDay ? 1 : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(color, in: RoundedRectangle(cornerRadius: 4))
+                .background(color.opacity(isMultiDay ? 0.75 : 1), in: RoundedRectangle(cornerRadius: 3))
         } else {
             HStack(spacing: 4) {
                 Circle().fill(color).frame(width: 10, height: 10)
