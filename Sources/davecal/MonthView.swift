@@ -115,6 +115,7 @@ struct DayCell: View {
     let openEvent: (EKEvent) -> Void
 
     private let maxShown = 5
+    @State private var showAll = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -127,9 +128,28 @@ struct DayCell: View {
                     .onTapGesture(count: 2) { openEvent(event) }
             }
             if events.count > maxShown {
-                Text("+\(events.count - maxShown) more")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isToday ? .white : .secondary)
+                Button("+\(events.count - maxShown) more") { showAll = true }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(isToday ? .white : Color.accentColor)
+                    .popover(isPresented: $showAll, arrowEdge: .bottom) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                                .font(.system(size: 18, weight: .bold))
+                                .padding(.bottom, 4)
+                            ForEach(Array(events.enumerated()), id: \.offset) { _, event in
+                                EventChip(event: event, onToday: false, truncate: false)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture(count: 2) { showAll = false; openEvent(event) }
+                            }
+                            Text("Double-click an event to open it.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 4)
+                        }
+                        .padding(14)
+                        .frame(minWidth: 320)
+                    }
             }
             Spacer(minLength: 0)
         }
@@ -150,6 +170,7 @@ struct DayCell: View {
 struct EventChip: View {
     let event: EKEvent
     let onToday: Bool
+    var truncate = true
 
     private var color: Color {
         if let cg = event.calendar?.cgColor { return Color(cgColor: cg) }
@@ -166,7 +187,8 @@ struct EventChip: View {
         if event.isAllDay {
             Text(event.title ?? "")
                 .font(.system(size: isMultiDay ? 11 : 15, weight: .semibold))
-                .lineLimit(1)
+                .lineLimit(truncate ? 1 : nil)
+                .help(event.title ?? "")
                 .foregroundStyle(.white)
                 .padding(.horizontal, 5)
                 .padding(.vertical, isMultiDay ? 1 : 2)
@@ -179,9 +201,10 @@ struct EventChip: View {
                     .font(.system(size: 15, weight: .bold))
                 Text(event.title ?? "")
                     .font(.system(size: 15))
-                    .lineLimit(1)
+                    .lineLimit(truncate ? 1 : nil)
             }
             .foregroundStyle(onToday ? .white : .primary)
+            .help(event.title ?? "")
         }
     }
 }
