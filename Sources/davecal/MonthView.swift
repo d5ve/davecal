@@ -119,9 +119,14 @@ struct DayCell: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(day.formatted(.dateTime.day()))
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(isToday ? .white : (inMonth ? .primary : .secondary))
+            Button { showAll = true } label: {
+                Text(day.formatted(.dateTime.day()))
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(isToday ? .white : (inMonth ? .primary : .secondary))
+            }
+            .buttonStyle(.plain)
+            .help("Click to list this day's events")
+            .popover(isPresented: $showAll, arrowEdge: .bottom) { dayPopover }
             ForEach(Array(events.prefix(maxShown).enumerated()), id: \.offset) { _, event in
                 EventChip(event: event, onToday: isToday)
                     .contentShape(Rectangle())
@@ -132,24 +137,6 @@ struct DayCell: View {
                     .buttonStyle(.plain)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(isToday ? .white : Color.accentColor)
-                    .popover(isPresented: $showAll, arrowEdge: .bottom) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                                .font(.system(size: 18, weight: .bold))
-                                .padding(.bottom, 4)
-                            ForEach(Array(events.enumerated()), id: \.offset) { _, event in
-                                EventChip(event: event, onToday: false, truncate: false)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture(count: 2) { showAll = false; openEvent(event) }
-                            }
-                            Text("Double-click an event to open it.")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 4)
-                        }
-                        .padding(14)
-                        .frame(minWidth: 320)
-                    }
             }
             Spacer(minLength: 0)
         }
@@ -159,6 +146,30 @@ struct DayCell: View {
         .clipped()
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { openNew() }
+    }
+
+    private var dayPopover: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                .font(.system(size: 18, weight: .bold))
+                .padding(.bottom, 4)
+            if events.isEmpty {
+                Text("Nothing on.")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(Array(events.enumerated()), id: \.offset) { _, event in
+                EventChip(event: event, onToday: false, truncate: false)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { showAll = false; openEvent(event) }
+            }
+            Text("Double-click an event to open it.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+        }
+        .padding(14)
+        .frame(minWidth: 320)
     }
 
     private var background: Color {
