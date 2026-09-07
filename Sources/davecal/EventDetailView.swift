@@ -27,6 +27,7 @@ struct EventDetailView: View {
     @State private var savedMessage: String?
     @State private var errorMessage: String?
     @State private var askAboutChanges = false
+    @State private var askDelete = false
 
     private let calendar = Calendar.current
 
@@ -85,6 +86,9 @@ struct EventDetailView: View {
 
             HStack {
                 Button("Discard", role: .destructive) { dismiss() }
+                if !isNew {
+                    Button("Delete", role: .destructive) { askDelete = true }
+                }
                 Spacer()
                 Button("Close") {
                     if isDirty { askAboutChanges = true } else { dismiss() }
@@ -107,10 +111,20 @@ struct EventDetailView: View {
         } message: {
             Text(savedMessage ?? "")
         }
-        .alert("Could not save", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+        .alert("Something went wrong", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK") {}
         } message: {
             Text(errorMessage ?? "")
+        }
+        .confirmationDialog(deleteTitle, isPresented: $askDelete, titleVisibility: .visible) {
+            if isRecurring {
+                Button("Delete this occurrence only", role: .destructive) { delete(.thisEvent) }
+                Button("Delete this and all later occurrences", role: .destructive) { delete(.futureEvents) }
+                Button("Delete the entire series", role: .destructive) { deleteSeries() }
+            } else {
+                Button("Delete", role: .destructive) { delete(.thisEvent) }
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .confirmationDialog("You have unsaved changes.", isPresented: $askAboutChanges, titleVisibility: .visible) {
             Button("Save") { save() }
@@ -130,6 +144,38 @@ struct EventDetailView: View {
                 .frame(width: 80, alignment: .trailing)
                 .padding(.top, 4)
             content()
+        }
+    }
+
+    private var isRecurring: Bool { existingEvent()?.hasRecurrenceRules ?? false }
+
+    private var deleteTitle: String {
+        let name = original.title.isEmpty ? "this event" : "\"\(original.title)\""
+        return isRecurring ? "\(name) repeats. What do you want to delete?" : "Delete \(name)? This cannot be undone."
+    }
+
+    // MARK: Delete
+
+    private func delete(_ span: EKSpan) {
+        guard let event = existingEvent() else { return }
+        remove(event, span: span)
+    }
+
+    /// Removing from the first occurrence onwards takes out the whole series.
+    private func deleteSeries() {
+        guard let id = request.eventIdentifier,
+              let first = store.eventStore.event(withIdentifier: id) else { return }
+        remove(first, span: .futureEvents)
+    }
+
+    private func remove(_ event: EKEvent, span: EKSpan) {
+        do {
+            try store.eventStore.remove(event, span: span, commit: true)
+            store.reload()
+            dismiss()
+        } catch {
+            store.eventStore.reset()
+            errorMessage = error.localizedDescription
         }
     }
 
