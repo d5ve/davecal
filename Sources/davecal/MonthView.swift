@@ -27,7 +27,7 @@ struct MonthView: View {
             Button { shift(-1) } label: { Image(systemName: "chevron.left") }
             Button { shift(1) } label: { Image(systemName: "chevron.right") }
             Text(month.formatted(.dateTime.month(.wide).year()))
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: 24, weight: .semibold))
                 .padding(.leading, 12)
             Spacer()
             Button("New Event") {
@@ -50,7 +50,7 @@ struct MonthView: View {
         HStack(spacing: 2) {
             ForEach(weekdayNames, id: \.self) { name in
                 Text(name)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
@@ -114,14 +114,14 @@ struct DayCell: View {
     let openNew: () -> Void
     let openEvent: (EKEvent) -> Void
 
-    private let maxShown = 5
+    private let maxShown = 6
     @State private var showAll = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Button { showAll = true } label: {
                 Text(day.formatted(.dateTime.day()))
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(isToday ? .white : (inMonth ? .primary : .secondary))
             }
             .buttonStyle(.plain)
@@ -135,7 +135,7 @@ struct DayCell: View {
             if events.count > maxShown {
                 Button("+\(events.count - maxShown) more") { showAll = true }
                     .buttonStyle(.plain)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(isToday ? .white : Color.accentColor)
             }
             Spacer(minLength: 0)
@@ -197,21 +197,21 @@ struct EventChip: View {
     var body: some View {
         if event.isAllDay {
             Text(event.title ?? "")
-                .font(.system(size: isMultiDay ? 11 : 15, weight: .semibold))
+                .font(.system(size: isMultiDay ? 11 : 12, weight: .medium))
                 .lineLimit(truncate ? 1 : nil)
                 .help(event.title ?? "")
                 .foregroundStyle(.white)
-                .padding(.horizontal, 5)
-                .padding(.vertical, isMultiDay ? 1 : 2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(color.opacity(isMultiDay ? 0.75 : 1), in: RoundedRectangle(cornerRadius: 3))
         } else {
             HStack(spacing: 4) {
-                Circle().fill(color).frame(width: 10, height: 10)
+                Circle().fill(color).frame(width: 7, height: 7)
                 Text(event.startDate.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(event.title ?? "")
-                    .font(.system(size: 15))
+                    .font(.system(size: 12))
                     .lineLimit(truncate ? 1 : nil)
             }
             .foregroundStyle(onToday ? .white : .primary)
