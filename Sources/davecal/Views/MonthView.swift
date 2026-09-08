@@ -31,15 +31,15 @@ struct MonthView: View {
         .padding(.horizontal, 2)
     }
 
-    /// Six equal rows of seven cells on a dark backing, which shows through
+    /// Six equal rows of seven cells on a grey backing, which shows through
     /// the gaps as the grid lines.
     private var grid: some View {
         let days = gridDays
         let byDay = store.eventsByDay
         let today = calendar.startOfDay(for: .now)
-        return VStack(spacing: 2) {
+        return VStack(spacing: 1) {
             ForEach(0..<6, id: \.self) { row in
-                HStack(spacing: 2) {
+                HStack(spacing: 1) {
                     ForEach(days[(row * 7)..<(row * 7 + 7)], id: \.self) { day in
                         DayCell(
                             day: day,
@@ -55,8 +55,8 @@ struct MonthView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding(2)
-        .background(Color.primary, ignoresSafeAreaEdges: [])
+        .padding(1)
+        .background(Color.primary.opacity(0.45), ignoresSafeAreaEdges: [])
         .padding([.horizontal, .bottom], 10)
     }
 
