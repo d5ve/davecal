@@ -9,14 +9,16 @@ struct WeekView: View {
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 52
     private let labelWidth: CGFloat = 54
+    /// Width of the scrolling grid, which is narrower than the headers by the scrollbar.
+    @State private var gridWidth: CGFloat?
 
     private var days: [Date] { (0..<7).map { calendar.date(byAdding: .day, value: $0, to: weekStart)! } }
 
     var body: some View {
         let byDay = store.eventsByDay(calendar: calendar)
-        VStack(spacing: 0) {
-            dayHeaders
-            allDayStrip(byDay)
+        VStack(alignment: .leading, spacing: 0) {
+            dayHeaders.frame(width: gridWidth)
+            allDayStrip(byDay).frame(width: gridWidth)
             Divider()
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
@@ -37,6 +39,7 @@ struct WeekView: View {
                     .frame(height: hourHeight * 24)
                     .padding(.top, 12)
                     .padding(.bottom, 24)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
                 }
                 .onAppear {
                     DispatchQueue.main.async { proxy.scrollTo("hour-7", anchor: .top) }
