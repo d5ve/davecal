@@ -11,6 +11,8 @@ final class CalendarStore {
     var denied = false
     var events: [EKEvent] = []
     var calendars: [EKCalendar] = []
+    /// Events from now for the next two weeks, for the sidebar.
+    var upcoming: [EKEvent] = []
 
     /// Calendars switched off in the sidebar. Stored as a set of identifiers so
     /// everything defaults to on.
@@ -57,10 +59,46 @@ final class CalendarStore {
         calendars = eventStore.calendars(for: .event).sorted {
             ($0.source.title, $0.title) < ($1.source.title, $1.title)
         }
+        let now = Date.now
+        let horizon = calendar.date(byAdding: .day, value: 14, to: now)!
+        upcoming = eventStore.events(matching: eventStore.predicateForEvents(withStart: now, end: horizon, calendars: nil))
+            .filter { !($0.isAllDay && isMultiDay($0)) }
+            .sorted { a, b in
+                if a.isAllDay != b.isAllDay { return a.isAllDay }
+                return a.startDate < b.startDate
+            }
         guard let range = loadedRange else { return }
         let predicate = eventStore.predicateForEvents(
             withStart: range.start, end: range.end, calendars: nil)
         events = eventStore.events(matching: predicate)
+    }
+
+    private var calendar: Calendar { .current }
+
+    func isMultiDay(_ event: EKEvent) -> Bool {
+        guard let start = event.startDate, let end = event.endDate else { return false }
+        return !calendar.isDate(start, inSameDayAs: end.addingTimeInterval(-1))
+    }
+
+    /// Whether the sidebar settings (checkbox, hold-to-solo) allow this event to show.
+    func shows(_ event: EKEvent) -> Bool {
+        guard let id = event.calendar?.calendarIdentifier else { return true }
+        if let soloID { return id == soloID }
+        return !disabledIDs.contains(id)
+    }
+
+    /// Upcoming events that pass the sidebar settings, grouped by day in order.
+    var upcomingByDay: [(day: Date, events: [EKEvent])] {
+        var groups: [(Date, [EKEvent])] = []
+        for event in upcoming where shows(event) {
+            let day = calendar.startOfDay(for: event.startDate)
+            if let i = groups.firstIndex(where: { $0.0 == day }) {
+                groups[i].1.append(event)
+            } else {
+                groups.append((day, [event]))
+            }
+        }
+        return groups.sorted { $0.0 < $1.0 }.map { (day: $0.0, events: $0.1) }
     }
 
     func isEnabled(_ calendar: EKCalendar) -> Bool { !disabledIDs.contains(calendar.calendarIdentifier) }
@@ -94,11 +132,7 @@ final class CalendarStore {
     /// appears under every day it covers.
     func eventsByDay(calendar: Calendar) -> [Date: [EKEvent]] {
         var result: [Date: [EKEvent]] = [:]
-        for event in events {
-            if let id = event.calendar?.calendarIdentifier {
-                if let soloID { if id != soloID { continue } }
-                else if disabledIDs.contains(id) { continue }
-            }
+        for event in events where shows(event) {
             guard let start = event.startDate, let end = event.endDate else { continue }
             let firstDay = calendar.startOfDay(for: start)
             // End dates are exclusive (an all-day event ends at 00:00 the next

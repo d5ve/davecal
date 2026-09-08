@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @Environment(CalendarStore.self) private var store
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         List {
@@ -20,9 +21,60 @@ struct SidebarView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.top, 8)
+
+            Section {
+                let groups = store.upcomingByDay
+                if groups.isEmpty {
+                    Text("Nothing in the next two weeks.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(groups, id: \.day) { group in
+                    Text(dayLabel(group.day))
+                        .font(.system(size: 13, weight: .bold))
+                        .padding(.top, 6)
+                    ForEach(Array(group.events.enumerated()), id: \.offset) { _, event in
+                        UpcomingRow(event: event)
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) { openWindow(id: "event", value: EventRequest.existing(event)) }
+                    }
+                }
+            } header: {
+                Text("Upcoming")
+                    .font(.system(size: 16, weight: .bold))
+            }
         }
         .listStyle(.sidebar)
-        .navigationSplitViewColumnWidth(min: 240, ideal: 280)
+        .navigationSplitViewColumnWidth(min: 260, ideal: 300)
+    }
+
+    private func dayLabel(_ day: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(day) { return "Today" }
+        if cal.isDateInTomorrow(day) { return "Tomorrow" }
+        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+}
+
+struct UpcomingRow: View {
+    let event: EKEvent
+
+    private var color: Color {
+        if let cg = event.calendar?.cgColor { return Color(cgColor: cg) }
+        return .gray
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(event.isAllDay ? "all day" : event.startDate.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 44, alignment: .leading)
+            Text(event.title ?? "")
+                .font(.system(size: 13))
+                .lineLimit(1)
+        }
+        .help(event.title ?? "")
     }
 }
 
