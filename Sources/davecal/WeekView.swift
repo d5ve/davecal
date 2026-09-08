@@ -36,7 +36,9 @@ struct WeekView: View {
                     }
                     .frame(height: hourHeight * 24)
                 }
-                .onAppear { proxy.scrollTo("hour-7", anchor: .top) }
+                .onAppear {
+                    DispatchQueue.main.async { proxy.scrollTo("hour-7", anchor: .top) }
+                }
             }
         }
         .task(id: weekStart) {
@@ -46,7 +48,7 @@ struct WeekView: View {
 
     private var dayHeaders: some View {
         HStack(spacing: 0) {
-            Color.clear.frame(width: labelWidth)
+            Spacer().frame(width: labelWidth)
             ForEach(days, id: \.self) { day in
                 let today = calendar.isDateInToday(day)
                 VStack(spacing: 0) {
@@ -61,6 +63,7 @@ struct WeekView: View {
                 .background(today ? Color.accentColor : Color.clear)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func allDayStrip(_ byDay: [Date: [EKEvent]]) -> some View {
@@ -85,6 +88,7 @@ struct WeekView: View {
         }
         .padding(.vertical, 4)
         .frame(minHeight: 24)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var hourLabels: some View {
