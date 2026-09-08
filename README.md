@@ -42,3 +42,7 @@ To run with made-up events instead of your own, for screenshots:
 ```bash
 make demo
 ```
+
+## Licence
+
+Public domain, under [The Unlicense](LICENSE).
