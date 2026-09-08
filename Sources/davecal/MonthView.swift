@@ -4,47 +4,19 @@ import SwiftUI
 struct MonthView: View {
     @Environment(CalendarStore.self) private var store
     @Environment(\.openWindow) private var openWindow
-    @State private var month: Date = Calendar.current.startOfMonth(for: .now)
+    let month: Date
 
     private let calendar = Calendar.current
 
     var body: some View {
         VStack(spacing: 0) {
-            header
             weekdayRow
             grid
         }
-        .task { await store.requestAccess(); loadMonth() }
-        .onChange(of: month) { loadMonth() }
+        .task(id: month) { loadMonth() }
     }
 
     // MARK: Pieces
-
-    private var header: some View {
-        HStack {
-            Button("Today") { month = calendar.startOfMonth(for: .now) }
-            Button { shift(-1) } label: { Image(systemName: "chevron.left") }
-            Button { shift(1) } label: { Image(systemName: "chevron.right") }
-            Text(month.formatted(.dateTime.month(.wide).year()))
-                .font(.system(size: 24, weight: .semibold))
-                .padding(.leading, 12)
-            Spacer()
-            Button("New Event") {
-                let today = calendar.startOfDay(for: .now)
-                let day = calendar.isDate(today, equalTo: month, toGranularity: .month) ? today : month
-                openWindow(id: "event", value: EventRequest.newEvent(on: day))
-            }
-            .keyboardShortcut("n")
-            if store.denied {
-                Text("Calendar access denied. Enable it in System Settings > Privacy & Security > Calendars.")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.red)
-            }
-        }
-        .controlSize(.large)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
 
     private var weekdayRow: some View {
         HStack(spacing: 2) {
@@ -99,10 +71,6 @@ struct MonthView: View {
         let offset = (weekday - calendar.firstWeekday + 7) % 7
         let start = calendar.date(byAdding: .day, value: -offset, to: month)!
         return (0..<42).map { calendar.date(byAdding: .day, value: $0, to: start)! }
-    }
-
-    private func shift(_ months: Int) {
-        month = calendar.date(byAdding: .month, value: months, to: month)!
     }
 
     private func loadMonth() {
