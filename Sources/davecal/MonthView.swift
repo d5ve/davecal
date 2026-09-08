@@ -53,7 +53,7 @@ struct MonthView: View {
             }
         }
         .padding(2)
-        .background(Color.primary)
+        .background(Color.primary, ignoresSafeAreaEdges: [])
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
