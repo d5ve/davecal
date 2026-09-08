@@ -7,7 +7,6 @@ struct MonthView: View {
     @State private var month: Date = Calendar.current.startOfMonth(for: .now)
 
     private let calendar = Calendar.current
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,7 +42,8 @@ struct MonthView: View {
             }
         }
         .controlSize(.large)
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private var weekdayRow: some View {
@@ -62,21 +62,27 @@ struct MonthView: View {
         let days = gridDays
         let byDay = store.eventsByDay(calendar: calendar)
         let today = calendar.startOfDay(for: .now)
-        return LazyVGrid(columns: columns, spacing: 2) {
-            ForEach(days, id: \.self) { day in
-                DayCell(
-                    day: day,
-                    inMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
-                    isToday: day == today,
-                    events: byDay[day] ?? [],
-                    openNew: { openWindow(id: "event", value: EventRequest.newEvent(on: day)) },
-                    openEvent: { openWindow(id: "event", value: EventRequest.existing($0)) }
-                )
-                .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        return VStack(spacing: 2) {
+            ForEach(0..<6, id: \.self) { row in
+                HStack(spacing: 2) {
+                    ForEach(days[(row * 7)..<(row * 7 + 7)], id: \.self) { day in
+                        DayCell(
+                            day: day,
+                            inMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
+                            isToday: day == today,
+                            events: byDay[day] ?? [],
+                            openNew: { openWindow(id: "event", value: EventRequest.newEvent(on: day)) },
+                            openEvent: { openWindow(id: "event", value: EventRequest.existing($0)) }
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding(2)
         .background(Color.primary)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Dates
