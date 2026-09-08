@@ -83,8 +83,49 @@ extension EKEvent {
         return days
     }
 
+    /// "Repeats every week on Tuesday until 20 Dec 2026", or nil if it doesn't repeat.
+    var repeatDescription: String? {
+        guard let rule = recurrenceRules?.first else { return nil }
+        var text = "Repeats " + rule.frequencyText
+        if rule.frequency == .weekly, let days = rule.daysOfTheWeek, !days.isEmpty {
+            let symbols = Calendar.current.weekdaySymbols
+            text += " on " + days.map { symbols[$0.dayOfTheWeek.rawValue - 1] }.joined(separator: ", ")
+        }
+        if let end = rule.recurrenceEnd {
+            if let date = end.endDate {
+                text += " until " + date.formatted(.dateTime.day().month(.abbreviated).year())
+            } else if end.occurrenceCount > 0 {
+                text += ", \(end.occurrenceCount) times"
+            }
+        }
+        if isDetached { text += ". This occurrence was changed on its own." }
+        return text
+    }
+
     /// What VoiceOver reads for this event.
     var accessibilityDescription: String {
         isAllDay ? "\(displayTitle), all day" : "\(startDate.timeText), \(displayTitle)"
+    }
+}
+
+extension EKRecurrenceRule {
+    /// "daily", "every 2 weeks", "monthly", "yearly".
+    var frequencyText: String {
+        let unit: String
+        switch frequency {
+        case .daily: unit = "day"
+        case .weekly: unit = "week"
+        case .monthly: unit = "month"
+        case .yearly: unit = "year"
+        @unknown default: unit = "period"
+        }
+        if interval > 1 { return "every \(interval) \(unit)s" }
+        switch frequency {
+        case .daily: return "daily"
+        case .weekly: return "weekly"
+        case .monthly: return "monthly"
+        case .yearly: return "yearly"
+        @unknown default: return "regularly"
+        }
     }
 }

@@ -14,6 +14,9 @@ struct EventDetailView: View {
     @State private var errorMessage: String?
     @State private var askingAboutChanges = false
     @State private var askingToDelete = false
+    @State private var askingSaveSpan = false
+    @State private var repeatDescription: String?
+    @State private var isDetached = false
 
     private let calendar = Calendar.current
     private let defaultLength: TimeInterval = 3600
@@ -62,6 +65,13 @@ struct EventDetailView: View {
                 DatePicker("End", selection: $draft.end, in: draft.start..., displayedComponents: dateComponents).labelsHidden()
                 weekdayName(draft.end)
             }
+            if let repeatDescription {
+                field("Repeats") {
+                    Text(repeatDescription)
+                        .font(.system(size: 16))
+                        .padding(.top, 4)
+                }
+            }
             field("Location") {
                 TextField("Location", text: $draft.location).font(.system(size: 18))
             }
@@ -87,6 +97,11 @@ struct EventDetailView: View {
             Button("OK") {}
         } message: {
             Text(errorMessage ?? "")
+        }
+        .confirmationDialog("This event repeats. Which occurrences should change?", isPresented: $askingSaveSpan, titleVisibility: .visible) {
+            Button("Only this occurrence") { save(span: .thisEvent) }
+            Button("This and all later occurrences") { save(span: .futureEvents) }
+            Button("Cancel", role: .cancel) {}
         }
         .confirmationDialog(deleteQuestion, isPresented: $askingToDelete, titleVisibility: .visible) {
             if isRecurring {
@@ -166,6 +181,8 @@ struct EventDetailView: View {
             d.end = event.endDate
             d.location = event.location ?? ""
             d.notes = event.notes ?? ""
+            repeatDescription = event.repeatDescription
+            isDetached = event.isDetached
         } else {
             d.start = defaultStart()
             d.end = d.start.addingTimeInterval(defaultLength)
@@ -196,7 +213,17 @@ struct EventDetailView: View {
 
     // MARK: Saving
 
+    /// Repeating events first ask which occurrences to change. An occurrence
+    /// already edited on its own can only be saved on its own.
     private func save() {
+        if isRecurring && !isDetached {
+            askingSaveSpan = true
+        } else {
+            save(span: .thisEvent)
+        }
+    }
+
+    private func save(span: EKSpan) {
         guard let cal = store.eventStore.calendar(withIdentifier: draft.calendarID) else {
             errorMessage = "Pick a calendar first."
             return
@@ -218,7 +245,7 @@ struct EventDetailView: View {
             event.endDate = max(draft.end, draft.start.addingTimeInterval(60))
         }
         do {
-            try store.eventStore.save(event, span: .thisEvent, commit: true)
+            try store.eventStore.save(event, span: span, commit: true)
             store.reload()
             dismiss()
         } catch {
