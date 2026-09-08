@@ -107,17 +107,18 @@ struct WeekView: View {
     }
 
     private var hourLabels: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .topTrailing) {
+            Color.clear
             ForEach(0..<24, id: \.self) { hour in
                 Text(String(format: "%02d:00", hour))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .frame(width: labelWidth, height: hourHeight, alignment: .topTrailing)
                     .padding(.trailing, 4)
-                    .offset(y: -7) // centre the label on the hour line
+                    .offset(y: CGFloat(hour) * hourHeight - 7) // centred on the hour line
                     .id("hour-\(hour)")
             }
         }
+        .frame(width: labelWidth, height: hourHeight * 24)
         .accessibilityHidden(true)
     }
 }
@@ -177,17 +178,22 @@ struct DayColumn: View {
     }
 
     private var hourLines: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { _ in
-                Rectangle().fill(Color.primary.opacity(0.25)).frame(height: 1)
-                Spacer(minLength: 0)
-            }
+        ForEach(0..<24, id: \.self) { hour in
+            Rectangle().fill(Color.primary.opacity(0.25))
+                .frame(height: 1)
+                .offset(y: CGFloat(hour) * hourHeight)
         }
         .accessibilityHidden(true)
     }
 
+    /// Vertical position by clock time, so daylight-saving days still line up.
     private func y(for date: Date, dayStart: Date) -> CGFloat {
-        CGFloat(date.timeIntervalSince(dayStart)) / 3600 * hourHeight
+        if date >= calendar.date(byAdding: .day, value: 1, to: dayStart)! {
+            return hourHeight * 24
+        }
+        let parts = calendar.dateComponents([.hour, .minute], from: date)
+        let minutes = CGFloat(parts.hour ?? 0) * 60 + CGFloat(parts.minute ?? 0)
+        return minutes / 60 * hourHeight
     }
 
     /// Clip each event to this day, then give overlapping events side-by-side lanes.
