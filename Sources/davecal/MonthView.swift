@@ -94,13 +94,20 @@ struct DayCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Button { showAll = true } label: {
-                Text(day.formatted(.dateTime.day()))
-                    .font(.system(size: 16, weight: .semibold))
+                Text(dayLabel)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(isToday ? .white : (inMonth ? .primary : .secondary))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(isToday ? Color.black.opacity(0.25) : Color.primary.opacity(0.08))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help("Click to list this day's events")
             .popover(isPresented: $showAll, arrowEdge: .bottom) { dayPopover }
+            .padding(.horizontal, -5)
+            .padding(.top, -5)
             ForEach(Array(events.prefix(maxShown).enumerated()), id: \.offset) { _, event in
                 EventChip(event: event, onToday: isToday)
                     .contentShape(Rectangle())
@@ -120,6 +127,18 @@ struct DayCell: View {
         .clipped()
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { openNew() }
+    }
+
+    /// "Wed 9th", with the month added on the 1st: "Thu 1st Oct".
+    private var dayLabel: String {
+        let cal = Calendar.current
+        let n = cal.component(.day, from: day)
+        let f = NumberFormatter()
+        f.numberStyle = .ordinal
+        let ordinal = f.string(from: NSNumber(value: n)) ?? "\(n)"
+        let weekday = day.formatted(.dateTime.weekday(.abbreviated))
+        if n == 1 { return "\(weekday) \(ordinal) \(day.formatted(.dateTime.month(.abbreviated)))" }
+        return "\(weekday) \(ordinal)"
     }
 
     private var dayPopover: some View {
