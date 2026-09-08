@@ -35,6 +35,8 @@ struct WeekView: View {
                         }
                     }
                     .frame(height: hourHeight * 24)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
                 }
                 .onAppear {
                     DispatchQueue.main.async { proxy.scrollTo("hour-7", anchor: .top) }
