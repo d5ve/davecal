@@ -33,7 +33,7 @@ struct SidebarView: View {
                     Text(dayLabel(group.day))
                         .font(.system(size: 13, weight: .bold))
                         .padding(.top, 6)
-                    ForEach(Array(group.events.enumerated()), id: \.offset) { _, event in
+                    ForEach(group.events, id: \.occurrenceKey) { event in
                         UpcomingRow(event: event)
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { openWindow(id: "event", value: EventRequest.existing(event)) }
@@ -117,5 +117,12 @@ struct CalendarRow: View {
         .toggleStyle(.checkbox)
         .controlSize(.large)
         .padding(.vertical, 2)
+    }
+}
+
+extension EKEvent {
+    /// Unique per occurrence: repeating events share an identifier but not a start.
+    var occurrenceKey: String {
+        "\(eventIdentifier ?? "")@\(startDate?.timeIntervalSince1970 ?? 0)"
     }
 }
