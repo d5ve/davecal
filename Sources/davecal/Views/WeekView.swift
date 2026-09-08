@@ -149,6 +149,13 @@ struct DayColumn: View {
         let placed = layout(dayStart: dayStart)
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
+                // Empty space, behind the blocks: double-click starts a new event there.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2, coordinateSpace: .local) { point in
+                        let minutes = Int(point.y / hourHeight * 60) / snapMinutes * snapMinutes
+                        openNew(calendar.date(byAdding: .minute, value: minutes, to: dayStart)!)
+                    }
                 hourLines
                 ForEach(placed, id: \.event.occurrenceKey) { p in
                     let top = y(for: p.start, dayStart: dayStart)
@@ -163,13 +170,9 @@ struct DayColumn: View {
                 if calendar.isDateInToday(day) {
                     Rectangle().fill(.red).frame(height: 2)
                         .offset(y: y(for: .now, dayStart: dayStart))
+                        .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture(count: 2, coordinateSpace: .local) { point in
-                let minutes = Int(point.y / hourHeight * 60) / snapMinutes * snapMinutes
-                openNew(calendar.date(byAdding: .minute, value: minutes, to: dayStart)!)
             }
         }
         .accessibilityLabel(day.longDayLabel)
@@ -184,6 +187,7 @@ struct DayColumn: View {
                 .frame(height: 1)
                 .offset(y: CGFloat(hour) * hourHeight)
         }
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
