@@ -12,14 +12,13 @@ final class CalendarStore {
     var events: [EKEvent] = []
     var calendars: [EKCalendar] = []
 
-    /// Calendars switched off in the sidebar. Stored as sets of identifiers so
+    /// Calendars switched off in the sidebar. Stored as a set of identifiers so
     /// everything defaults to on.
-    var hiddenIDs: Set<String> = CalendarStore.loadSet("hiddenCalendars") {
-        didSet { CalendarStore.saveSet(hiddenIDs, "hiddenCalendars") }
-    }
     var disabledIDs: Set<String> = CalendarStore.loadSet("disabledCalendars") {
         didSet { CalendarStore.saveSet(disabledIDs, "disabledCalendars") }
     }
+    /// While a calendar name is held down, only that calendar is shown.
+    var soloID: String?
 
     private var loadedRange: (start: Date, end: Date)?
 
@@ -64,12 +63,8 @@ final class CalendarStore {
         events = eventStore.events(matching: predicate)
     }
 
-    func isVisible(_ calendar: EKCalendar) -> Bool { !hiddenIDs.contains(calendar.calendarIdentifier) }
     func isEnabled(_ calendar: EKCalendar) -> Bool { !disabledIDs.contains(calendar.calendarIdentifier) }
 
-    func setVisible(_ calendar: EKCalendar, _ on: Bool) {
-        if on { hiddenIDs.remove(calendar.calendarIdentifier) } else { hiddenIDs.insert(calendar.calendarIdentifier) }
-    }
     func setEnabled(_ calendar: EKCalendar, _ on: Bool) {
         if on { disabledIDs.remove(calendar.calendarIdentifier) } else { disabledIDs.insert(calendar.calendarIdentifier) }
     }
@@ -100,7 +95,10 @@ final class CalendarStore {
     func eventsByDay(calendar: Calendar) -> [Date: [EKEvent]] {
         var result: [Date: [EKEvent]] = [:]
         for event in events {
-            if let id = event.calendar?.calendarIdentifier, hiddenIDs.contains(id) { continue }
+            if let id = event.calendar?.calendarIdentifier {
+                if let soloID { if id != soloID { continue } }
+                else if disabledIDs.contains(id) { continue }
+            }
             guard let start = event.startDate, let end = event.endDate else { continue }
             let firstDay = calendar.startOfDay(for: start)
             // End dates are exclusive (an all-day event ends at 00:00 the next
