@@ -73,9 +73,11 @@ struct EventDetailView: View {
             }
             field("Start") {
                 DatePicker("", selection: $draft.start, displayedComponents: components).labelsHidden()
+                dayName(draft.start)
             }
             field("End") {
                 DatePicker("", selection: $draft.end, in: draft.start..., displayedComponents: components).labelsHidden()
+                dayName(draft.end)
             }
             field("Location") {
                 TextField("Location", text: $draft.location).font(.system(size: 18))
@@ -136,6 +138,13 @@ struct EventDetailView: View {
             Button("Discard changes", role: .destructive) { dismiss() }
             Button("Keep editing", role: .cancel) {}
         }
+    }
+
+    private func dayName(_ date: Date) -> some View {
+        Text(date.formatted(.dateTime.weekday(.wide)))
+            .font(.system(size: 18, weight: .semibold))
+            .padding(.leading, 6)
+            .padding(.top, 2)
     }
 
     private var components: DatePickerComponents {
