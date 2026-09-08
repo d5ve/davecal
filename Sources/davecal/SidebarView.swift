@@ -12,12 +12,8 @@ struct SidebarView: View {
                         CalendarRow(calendar: cal)
                     }
                 } header: {
-                    HStack {
-                        Text(group.account)
-                            .font(.system(size: 16, weight: .bold))
-                        Spacer()
-                        Text("On").font(.system(size: 12, weight: .semibold)).frame(width: 40)
-                    }
+                    Text(group.account)
+                        .font(.system(size: 16, weight: .bold))
                 }
             }
             Text("Hold a name to show only that calendar.")
