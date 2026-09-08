@@ -1,6 +1,7 @@
 import EventKit
 import SwiftUI
 
+/// Calendars with an on/off checkbox each, then the next two weeks of events.
 struct SidebarView: View {
     @Environment(CalendarStore.self) private var store
     @Environment(\.openWindow) private var openWindow
@@ -13,10 +14,10 @@ struct SidebarView: View {
                         CalendarRow(calendar: cal)
                     }
                 } header: {
-                    Text(group.account)
-                        .font(.system(size: 16, weight: .bold))
+                    Text(group.account).font(.system(size: 16, weight: .bold))
                 }
             }
+
             Text("Hold a name to show only that calendar.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -30,51 +31,28 @@ struct SidebarView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(groups, id: \.day) { group in
-                    Text(dayLabel(group.day))
+                    Text(relativeDayLabel(group.day))
                         .font(.system(size: 13, weight: .bold))
                         .padding(.top, 6)
+                        .accessibilityAddTraits(.isHeader)
                     ForEach(group.events, id: \.occurrenceKey) { event in
                         UpcomingRow(event: event)
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) { openWindow(id: "event", value: EventRequest.existing(event)) }
+                            .openable { openWindow(id: "event", value: EventRequest.existing(event)) }
                     }
                 }
             } header: {
-                Text("Upcoming")
-                    .font(.system(size: 16, weight: .bold))
+                Text("Upcoming").font(.system(size: 16, weight: .bold))
             }
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 260, ideal: 300)
     }
 
-    private func dayLabel(_ day: Date) -> String {
+    private func relativeDayLabel(_ day: Date) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(day) { return "Today" }
         if cal.isDateInTomorrow(day) { return "Tomorrow" }
         return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-    }
-}
-
-struct UpcomingRow: View {
-    let event: EKEvent
-
-    private var color: Color {
-        if let cg = event.calendar?.cgColor { return Color(cgColor: cg) }
-        return .gray
-    }
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(event.isAllDay ? "all day" : event.startDate.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 44, alignment: .leading)
-            Text(event.title ?? "")
-                .font(.system(size: 13))
-                .lineLimit(1)
-        }
-        .help(event.title ?? "")
     }
 }
 
@@ -83,31 +61,28 @@ struct CalendarRow: View {
     let calendar: EKCalendar
 
     private var id: String { calendar.calendarIdentifier }
+    private var isSolo: Bool { store.soloID == id }
     private var dimmed: Bool {
-        if let solo = store.soloID { return solo != id }
+        if store.soloID != nil { return !isSolo }
         return !store.isEnabled(calendar)
     }
 
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(Color(cgColor: calendar.cgColor))
+                .fill(calendar.color)
                 .frame(width: 14, height: 14)
+                .accessibilityHidden(true)
+            // Plain text: a click does nothing, a press-and-hold solos the calendar.
             Text(calendar.title)
-                .font(.system(size: 17, weight: store.soloID == id ? .bold : .regular))
+                .font(.system(size: 17, weight: isSolo ? .bold : .regular))
                 .lineLimit(1)
                 .foregroundStyle(dimmed ? .secondary : .primary)
                 .contentShape(Rectangle())
-                .gesture(
-                    LongPressGesture(minimumDuration: 0.25)
-                        .sequenced(before: DragGesture(minimumDistance: 0))
-                        .onChanged { value in
-                            if case .second(true, _) = value { store.soloID = id }
-                        }
-                        .onEnded { _ in store.soloID = nil }
-                )
+                .gesture(soloGesture)
+                .accessibilityHint("Hold to show only this calendar")
             Spacer()
-            Toggle("", isOn: Binding(
+            Toggle(calendar.title, isOn: Binding(
                 get: { store.isEnabled(calendar) },
                 set: { store.setEnabled(calendar, $0) }
             ))
@@ -118,11 +93,32 @@ struct CalendarRow: View {
         .controlSize(.large)
         .padding(.vertical, 2)
     }
+
+    private var soloGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.25)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                if case .second(true, _) = value { store.soloID = id }
+            }
+            .onEnded { _ in store.soloID = nil }
+    }
 }
 
-extension EKEvent {
-    /// Unique per occurrence: repeating events share an identifier but not a start.
-    var occurrenceKey: String {
-        "\(eventIdentifier ?? "")@\(startDate?.timeIntervalSince1970 ?? 0)"
+struct UpcomingRow: View {
+    let event: EKEvent
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Circle().fill(event.color).frame(width: 8, height: 8)
+            Text(event.isAllDay ? "all day" : event.startDate.timeText)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 44, alignment: .leading)
+            Text(event.displayTitle)
+                .font(.system(size: 13))
+                .lineLimit(1)
+        }
+        .help(event.displayTitle)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(event.accessibilityDescription)
     }
 }

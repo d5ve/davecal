@@ -9,13 +9,16 @@ struct WeekView: View {
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 52
     private let labelWidth: CGFloat = 54
+    private let firstVisibleHour = 7
     /// Width of the scrolling grid, which is narrower than the headers by the scrollbar.
     @State private var gridWidth: CGFloat?
 
-    private var days: [Date] { (0..<7).map { calendar.date(byAdding: .day, value: $0, to: weekStart)! } }
+    private var days: [Date] {
+        (0..<7).map { calendar.date(byAdding: .day, value: $0, to: weekStart)! }
+    }
 
     var body: some View {
-        let byDay = store.eventsByDay(calendar: calendar)
+        let byDay = store.eventsByDay
         VStack(alignment: .leading, spacing: 0) {
             dayHeaders.frame(width: gridWidth)
             allDayStrip(byDay).frame(width: gridWidth)
@@ -33,7 +36,7 @@ struct WeekView: View {
                                 openEvent: { openWindow(id: "event", value: EventRequest.existing($0)) }
                             )
                             .frame(maxWidth: .infinity)
-                            .overlay(alignment: .leading) { Rectangle().fill(Color.primary.opacity(0.5)).frame(width: 1) }
+                            .overlay(alignment: .leading) { columnLine }
                         }
                     }
                     .frame(height: hourHeight * 24)
@@ -42,13 +45,18 @@ struct WeekView: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
                 }
                 .onAppear {
-                    DispatchQueue.main.async { proxy.scrollTo("hour-7", anchor: .top) }
+                    // Wait for the first layout pass, or the scroll doesn't happen.
+                    DispatchQueue.main.async { proxy.scrollTo("hour-\(firstVisibleHour)", anchor: .top) }
                 }
             }
         }
         .task(id: weekStart) {
-            store.load(start: weekStart, end: calendar.date(byAdding: .day, value: 7, to: weekStart)!)
+            store.display(start: weekStart, end: calendar.date(byAdding: .day, value: 7, to: weekStart)!)
         }
+    }
+
+    private var columnLine: some View {
+        Rectangle().fill(Color.primary.opacity(0.5)).frame(width: 1)
     }
 
     private var dayHeaders: some View {
@@ -66,6 +74,9 @@ struct WeekView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
                 .background(today ? Color.accentColor : Color.clear)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(today ? "Today, \(day.longDayLabel)" : day.longDayLabel)
+                .accessibilityAddTraits(.isHeader)
             }
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -80,15 +91,14 @@ struct WeekView: View {
                 .padding(.trailing, 4)
             ForEach(days, id: \.self) { day in
                 VStack(spacing: 2) {
-                    ForEach(Array((byDay[day] ?? []).filter(\.isAllDay).enumerated()), id: \.offset) { _, event in
-                        EventChip(event: event, onToday: false)
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) { openWindow(id: "event", value: EventRequest.existing(event)) }
+                    ForEach((byDay[day] ?? []).filter(\.isAllDay), id: \.occurrenceKey) { event in
+                        EventChip(event: event)
+                            .openable { openWindow(id: "event", value: EventRequest.existing(event)) }
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 2)
-                .overlay(alignment: .leading) { Rectangle().fill(Color.primary.opacity(0.5)).frame(width: 1) }
+                .overlay(alignment: .leading) { columnLine }
             }
         }
         .padding(.vertical, 4)
@@ -104,14 +114,15 @@ struct WeekView: View {
                     .foregroundStyle(.secondary)
                     .frame(width: labelWidth, height: hourHeight, alignment: .topTrailing)
                     .padding(.trailing, 4)
-                    .offset(y: -7)
+                    .offset(y: -7) // centre the label on the hour line
                     .id("hour-\(hour)")
             }
         }
+        .accessibilityHidden(true)
     }
 }
 
-/// One day's column of timed events.
+/// One day's column of timed events, drawn to scale.
 struct DayColumn: View {
     let day: Date
     let events: [EKEvent]
@@ -120,7 +131,10 @@ struct DayColumn: View {
     let openEvent: (EKEvent) -> Void
 
     private let calendar = Calendar.current
+    private let minimumBlockHeight: CGFloat = 18
+    private let snapMinutes = 15
 
+    /// An event clipped to this day, with its lane among overlapping events.
     struct Placed {
         let event: EKEvent
         let start: Date
@@ -135,52 +149,61 @@ struct DayColumn: View {
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 hourLines
-                ForEach(Array(placed.enumerated()), id: \.offset) { _, p in
-                    let top = yFor(p.start, dayStart: dayStart)
-                    let height = max(yFor(p.end, dayStart: dayStart) - top, 18)
+                ForEach(placed, id: \.event.occurrenceKey) { p in
+                    let top = y(for: p.start, dayStart: dayStart)
+                    let height = max(y(for: p.end, dayStart: dayStart) - top, minimumBlockHeight)
                     let width = (geo.size.width - 4) / CGFloat(p.lanes)
                     EventBlock(event: p.event)
                         .frame(width: width - 2, height: height)
                         .offset(x: 3 + CGFloat(p.lane) * width, y: top)
-                        .onTapGesture(count: 2) { openEvent(p.event) }
+                        .openable { openEvent(p.event) }
                 }
                 if calendar.isDateInToday(day) {
                     Rectangle().fill(.red).frame(height: 2)
-                        .offset(y: yFor(.now, dayStart: dayStart))
+                        .offset(y: y(for: .now, dayStart: dayStart))
+                        .accessibilityHidden(true)
                 }
             }
             .contentShape(Rectangle())
             .onTapGesture(count: 2, coordinateSpace: .local) { point in
-                let minutes = Int(point.y / hourHeight * 60 / 15) * 15
+                let minutes = Int(point.y / hourHeight * 60) / snapMinutes * snapMinutes
                 openNew(calendar.date(byAdding: .minute, value: minutes, to: dayStart)!)
             }
+        }
+        .accessibilityLabel(day.longDayLabel)
+        .accessibilityAction(named: "New event at 9:00") {
+            openNew(calendar.date(bySettingHour: 9, minute: 0, second: 0, of: dayStart)!)
         }
     }
 
     private var hourLines: some View {
         VStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { hour in
+            ForEach(0..<24, id: \.self) { _ in
                 Rectangle().fill(Color.primary.opacity(0.25)).frame(height: 1)
                 Spacer(minLength: 0)
             }
         }
+        .accessibilityHidden(true)
     }
 
-    private func yFor(_ date: Date, dayStart: Date) -> CGFloat {
+    private func y(for date: Date, dayStart: Date) -> CGFloat {
         CGFloat(date.timeIntervalSince(dayStart)) / 3600 * hourHeight
     }
 
     /// Clip each event to this day, then give overlapping events side-by-side lanes.
     private func layout(dayStart: Date) -> [Placed] {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        let shortest = TimeInterval(snapMinutes * 60)
         var items = events.compactMap { event -> Placed? in
             guard let s = event.startDate, let e = event.endDate else { return nil }
             let start = max(s, dayStart)
-            let end = min(max(e, start.addingTimeInterval(15 * 60)), dayEnd)
+            let end = min(max(e, start.addingTimeInterval(shortest)), dayEnd)
             return Placed(event: event, start: start, end: end)
         }
         items.sort { a, b in a.start != b.start ? a.start < b.start : a.end > b.end }
 
+        // Walk in start order. Events that overlap form a cluster; each takes
+        // the first free lane, and the cluster's lane count sets the widths.
         var result: [Placed] = []
         var cluster: [Int] = []
         var laneEnds: [Date] = []
@@ -188,15 +211,18 @@ struct DayColumn: View {
 
         func closeCluster() {
             for i in cluster { result[i].lanes = laneEnds.count }
-            cluster = []; laneEnds = []
+            cluster = []
+            laneEnds = []
         }
 
         for var item in items {
             if item.start >= clusterEnd { closeCluster() }
             if let lane = laneEnds.firstIndex(where: { $0 <= item.start }) {
-                item.lane = lane; laneEnds[lane] = item.end
+                item.lane = lane
+                laneEnds[lane] = item.end
             } else {
-                item.lane = laneEnds.count; laneEnds.append(item.end)
+                item.lane = laneEnds.count
+                laneEnds.append(item.end)
             }
             clusterEnd = max(clusterEnd, item.end)
             result.append(item)
@@ -204,30 +230,5 @@ struct DayColumn: View {
         }
         closeCluster()
         return result
-    }
-}
-
-struct EventBlock: View {
-    let event: EKEvent
-
-    private var color: Color {
-        if let cg = event.calendar?.cgColor { return Color(cgColor: cg) }
-        return .gray
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(event.startDate.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
-                .font(.system(size: 11, weight: .semibold))
-            Text(event.title ?? "")
-                .font(.system(size: 12))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(color.opacity(0.9), in: RoundedRectangle(cornerRadius: 4))
-        .clipped()
-        .help(event.title ?? "")
     }
 }
