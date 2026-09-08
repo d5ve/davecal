@@ -3,6 +3,8 @@
 A small native macOS calendar written for my own use. The aim is to be
 easier for me to read than the built-in Calendar app.
 
+### Completely vibe-coded. YMMV
+
 It works on the accounts already set up in macOS Calendar (iCloud, Fastmail,
 Microsoft 365 and so on) through Apple's EventKit, so it has no account setup
 of its own and everything it saves shows up everywhere else.
