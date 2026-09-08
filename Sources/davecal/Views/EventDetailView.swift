@@ -5,7 +5,7 @@ import SwiftUI
 /// Save writes through EventKit and closes.
 struct EventDetailView: View {
     @Environment(CalendarStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismissWindow) private var dismissWindow
 
     let request: EventRequest
 
@@ -30,6 +30,12 @@ struct EventDetailView: View {
         var end = Date.now
         var location = ""
         var notes = ""
+    }
+
+    /// Close this window. Works from inside a dialog too, which the plain
+    /// dismiss action does not.
+    private func close() {
+        DispatchQueue.main.async { dismissWindow(id: "event", value: request) }
     }
 
     private var isDirty: Bool { draft != original }
@@ -115,20 +121,20 @@ struct EventDetailView: View {
         }
         .confirmationDialog("You have unsaved changes.", isPresented: $askingAboutChanges, titleVisibility: .visible) {
             Button("Save") { save() }
-            Button("Discard changes", role: .destructive) { dismiss() }
+            Button("Discard changes", role: .destructive) { close() }
             Button("Keep editing", role: .cancel) {}
         }
     }
 
     private var buttons: some View {
         HStack {
-            Button("Discard", role: .destructive) { dismiss() }
+            Button("Discard", role: .destructive) { close() }
             if !request.isNew {
                 Button("Delete", role: .destructive) { askingToDelete = true }
             }
             Spacer()
             Button("Close") {
-                if isDirty { askingAboutChanges = true } else { dismiss() }
+                if isDirty { askingAboutChanges = true } else { close() }
             }
             .keyboardShortcut(.cancelAction)
             Button("Save") { save() }
@@ -247,7 +253,7 @@ struct EventDetailView: View {
         do {
             try store.eventStore.save(event, span: span, commit: true)
             store.reload()
-            dismiss()
+            close()
         } catch {
             store.eventStore.reset()
             errorMessage = error.localizedDescription
@@ -281,7 +287,7 @@ struct EventDetailView: View {
         do {
             try store.eventStore.remove(event, span: span, commit: true)
             store.reload()
-            dismiss()
+            close()
         } catch {
             store.eventStore.reset()
             errorMessage = error.localizedDescription
