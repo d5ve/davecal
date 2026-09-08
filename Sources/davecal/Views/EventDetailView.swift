@@ -55,7 +55,7 @@ struct EventDetailView: View {
             field("Calendar") {
                 Picker("Calendar", selection: $draft.calendarID) {
                     ForEach(store.writableCalendars, id: \.calendarIdentifier) { cal in
-                        Text("\(cal.title)  (\(cal.source.title))").tag(cal.calendarIdentifier)
+                        Text("\(cal.title)  (\(store.accountName(cal)))").tag(cal.calendarIdentifier)
                     }
                 }
                 .labelsHidden()

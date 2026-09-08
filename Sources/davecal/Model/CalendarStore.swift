@@ -26,8 +26,10 @@ final class CalendarStore {
     var soloID: String?
 
     private var displayedRange: (start: Date, end: Date)?
+    private let demo: DemoData?
 
     init() {
+        demo = DemoData.isEnabled ? DemoData(eventStore: eventStore) : nil
         NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: eventStore, queue: .main
         ) { [weak self] _ in
@@ -38,6 +40,11 @@ final class CalendarStore {
     // MARK: Permission
 
     func requestAccess() async {
+        if demo != nil {
+            authorized = true
+            reload()
+            return
+        }
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess:
             authorized = true
@@ -61,8 +68,8 @@ final class CalendarStore {
     /// Fetch everything again. Called on any change in the calendar database.
     func reload() {
         guard authorized else { return }
-        calendars = eventStore.calendars(for: .event).sorted {
-            ($0.source.title, $0.title) < ($1.source.title, $1.title)
+        calendars = (demo?.calendars ?? eventStore.calendars(for: .event)).sorted {
+            (accountName($0), $0.title) < (accountName($1), $1.title)
         }
 
         let now = Date.now
@@ -77,7 +84,13 @@ final class CalendarStore {
     }
 
     private func fetch(from start: Date, to end: Date) -> [EKEvent] {
-        eventStore.events(matching: eventStore.predicateForEvents(withStart: start, end: end, calendars: nil))
+        if let demo { return demo.events(from: start, to: end) }
+        return eventStore.events(matching: eventStore.predicateForEvents(withStart: start, end: end, calendars: nil))
+    }
+
+    /// The account a calendar belongs to, as shown in the sidebar and picker.
+    func accountName(_ calendar: EKCalendar) -> String {
+        demo?.account(for: calendar) ?? calendar.source?.title ?? "Other"
     }
 
     /// All-day first, then by start time.
@@ -125,10 +138,11 @@ final class CalendarStore {
     var calendarsByAccount: [(account: String, calendars: [EKCalendar])] {
         var groups: [(account: String, calendars: [EKCalendar])] = []
         for cal in calendars {
-            if let i = groups.firstIndex(where: { $0.account == cal.source.title }) {
+            let account = accountName(cal)
+            if let i = groups.firstIndex(where: { $0.account == account }) {
                 groups[i].calendars.append(cal)
             } else {
-                groups.append((cal.source.title, [cal]))
+                groups.append((account, [cal]))
             }
         }
         return groups

@@ -1,39 +1,42 @@
 # davecal
 
-A small native macOS calendar. It reads and writes every account already set
-up in the macOS Calendar app (Fastmail, Microsoft 365, iCloud and so on)
-through Apple's EventKit, so there is no account setup of its own.
+A small native macOS calendar written for my own use. The aim is to be
+easier for me to read than the built-in Calendar app.
 
-- Month view with a strong grid, today as a solid block, and each all-day
-  event cut to the day cells it covers.
-- Week view with an hourly grid, overlapping events side by side, and a
-  line for the current time.
-- Sidebar with one checkbox per calendar. Hold a calendar name to see only
-  that calendar. Below it, the next two weeks of events.
-- An event window that stays open until you Save, Close, Discard or Delete.
-  Repeating events can be deleted one occurrence, from here on, or entirely.
+It works on the accounts already set up in macOS Calendar (iCloud, Fastmail,
+Microsoft 365 and so on) through Apple's EventKit, so it has no account setup
+of its own and everything it saves shows up everywhere else.
 
-## Shortcuts
+![davecal month view](screenshot.png)
 
-| Keys | Does |
-| --- | --- |
-| Cmd N | New event |
-| Cmd T | Go to today |
-| Cmd Left / Right | Previous / next month or week |
-| Cmd 1 / Cmd 2 | Month / week view |
-| Ctrl Cmd S | Show or hide the sidebar |
-| Return / Esc | Save and close / Close in the event window |
+## Installing a release
 
-Double-click an empty day or time slot to create an event there. Double-click
-an event to open it. Click a day's header strip for the full list of that day.
+Needs macOS 15 or later on an Apple Silicon Mac.
 
-## Building
+1. Download `davecal.zip` from the latest release and unzip it.
+2. It isn't signed with an Apple developer certificate, so macOS will refuse
+   to open it until the download flag is cleared:
 
-Needs macOS 15 or later and the Swift toolchain (Xcode or Command Line Tools).
+   ```bash
+   xattr -d com.apple.quarantine ~/Downloads/davecal.app
+   ```
+
+3. Move `davecal.app` to Applications and open it. macOS asks for calendar
+   access on first launch.
+
+## Building from source
+
+Needs the Swift toolchain (Xcode or the Command Line Tools).
 
 ```bash
 make run
 ```
 
 That builds a release binary, wraps it as `davecal.app` with an ad-hoc
-signature, and opens it. macOS asks for calendar access on first launch.
+signature, and opens it. `make release` produces `davecal.zip`.
+
+To run with made-up events instead of your own, for screenshots:
+
+```bash
+make demo
+```

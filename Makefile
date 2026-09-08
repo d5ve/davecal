@@ -1,7 +1,7 @@
 APP = davecal.app
 BIN = .build/release/davecal
 
-.PHONY: all build app run clean
+.PHONY: all build app run demo release clean
 
 all: app
 
@@ -18,5 +18,12 @@ app: build
 run: app
 	open $(APP)
 
+demo: app
+	open --env DAVECAL_DEMO=1 $(APP)
+
+release: app
+	rm -f davecal.zip
+	ditto -c -k --keepParent $(APP) davecal.zip
+
 clean:
-	rm -rf .build $(APP)
+	rm -rf .build $(APP) davecal.zip

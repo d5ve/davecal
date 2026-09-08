@@ -65,7 +65,7 @@ extension EKEvent {
 
     /// Unique per occurrence: repeating events share an identifier but not a start.
     var occurrenceKey: String {
-        "\(eventIdentifier ?? "")@\(startDate?.timeIntervalSince1970 ?? 0)"
+        "\(eventIdentifier ?? displayTitle)@\(startDate?.timeIntervalSince1970 ?? 0)"
     }
 
     /// The start of every day this event touches. End dates are exclusive
