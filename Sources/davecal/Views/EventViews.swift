@@ -47,23 +47,31 @@ struct EventChip: View {
     }
 }
 
-/// A timed event drawn to scale in the week view.
+/// A timed event drawn to scale in the week view. The caller sizes and clips
+/// it; `compact` puts the time and title on one line for short events.
 struct EventBlock: View {
     let event: EKEvent
+    var compact = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(event.startDate.timeText)
-                .font(.system(size: 11, weight: .semibold))
-            Text(event.displayTitle)
-                .font(.system(size: 12))
+        Group {
+            if compact {
+                HStack(spacing: 4) {
+                    Text(event.startDate.timeText).font(.system(size: 11, weight: .semibold))
+                    Text(event.displayTitle).font(.system(size: 11)).lineLimit(1)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.startDate.timeText).font(.system(size: 11, weight: .semibold))
+                    Text(event.displayTitle).font(.system(size: 12))
+                }
+            }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(event.color.opacity(0.9), in: RoundedRectangle(cornerRadius: 4))
-        .clipped()
         .help(event.displayTitle)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(event.accessibilityDescription)

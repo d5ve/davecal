@@ -154,8 +154,9 @@ struct DayColumn: View {
                     let top = y(for: p.start, dayStart: dayStart)
                     let height = max(y(for: p.end, dayStart: dayStart) - top, minimumBlockHeight)
                     let width = (geo.size.width - 4) / CGFloat(p.lanes)
-                    EventBlock(event: p.event)
-                        .frame(width: width - 2, height: height)
+                    EventBlock(event: p.event, compact: height < 34)
+                        .frame(width: width - 2, height: height, alignment: .topLeading)
+                        .clipped()
                         .offset(x: 3 + CGFloat(p.lane) * width, y: top)
                         .openable { openEvent(p.event) }
                 }
