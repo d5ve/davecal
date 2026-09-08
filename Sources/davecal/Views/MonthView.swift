@@ -49,12 +49,15 @@ struct MonthView: View {
                             openNew: { openWindow(id: "event", value: EventRequest.newEvent(on: day)) },
                             openEvent: { openWindow(id: "event", value: EventRequest.existing($0)) }
                         )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding(2)
         .background(Color.primary, ignoresSafeAreaEdges: [])
+        .padding([.horizontal, .bottom], 10)
     }
 
     /// Six full weeks starting on the week that contains the 1st.
