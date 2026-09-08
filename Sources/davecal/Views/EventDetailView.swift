@@ -1,7 +1,8 @@
 import EventKit
 import SwiftUI
 
-/// The event window. Stays open until Save, Close, Discard or Delete.
+/// The event window. Stays open until Save, Close, Discard or Delete;
+/// Save writes through EventKit and closes.
 struct EventDetailView: View {
     @Environment(CalendarStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -10,7 +11,6 @@ struct EventDetailView: View {
 
     @State private var draft = Draft()
     @State private var original = Draft()
-    @State private var savedMessage: String?
     @State private var errorMessage: String?
     @State private var askingAboutChanges = false
     @State private var askingToDelete = false
@@ -83,11 +83,6 @@ struct EventDetailView: View {
             if draft.end < newStart { draft.end = newStart.addingTimeInterval(defaultLength) }
         }
         .task { load() }
-        .alert("Saved", isPresented: presence($savedMessage)) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text(savedMessage ?? "")
-        }
         .alert("Something went wrong", isPresented: presence($errorMessage)) {
             Button("OK") {}
         } message: {
@@ -224,9 +219,8 @@ struct EventDetailView: View {
         }
         do {
             try store.eventStore.save(event, span: .thisEvent, commit: true)
-            original = draft
             store.reload()
-            savedMessage = "\"\(event.displayTitle)\" saved to \(cal.title) (\(cal.source.title))."
+            dismiss()
         } catch {
             store.eventStore.reset()
             errorMessage = error.localizedDescription

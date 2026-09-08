@@ -22,7 +22,7 @@ through Apple's EventKit, so there is no account setup of its own.
 | Cmd Left / Right | Previous / next month or week |
 | Cmd 1 / Cmd 2 | Month / week view |
 | Ctrl Cmd S | Show or hide the sidebar |
-| Return / Esc | Save / Close in the event window |
+| Return / Esc | Save and close / Close in the event window |
 
 Double-click an empty day or time slot to create an event there. Double-click
 an event to open it. Click a day's header strip for the full list of that day.
