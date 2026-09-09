@@ -10,6 +10,8 @@
     <string>nz.co.davecal</string>
     <key>CFBundleExecutable</key>
     <string>davecal</string>
+    <key>CFBundleIconFile</key>
+    <string>davecal</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
