@@ -28,25 +28,32 @@ struct SearchResultsView: View {
             .controlSize(.large)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            List {
-                ForEach(groups, id: \.day) { group in
-                    Section {
-                        ForEach(group.events, id: \.occurrenceKey) { event in
-                            row(event)
+            ScrollViewReader { proxy in
+                List {
+                    ForEach(groups, id: \.day) { group in
+                        Section {
+                            ForEach(group.events, id: \.occurrenceKey) { event in
+                                row(event).id(event.occurrenceKey)
+                            }
+                        } header: {
+                            Text(group.day.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
+                                .font(.system(size: 14, weight: .bold))
                         }
-                    } header: {
-                        Text(group.day.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
-                            .font(.system(size: 14, weight: .bold))
+                    }
+                }
+                // Wait a moment after typing stops before searching three years of events.
+                .task(id: query) {
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard !Task.isCancelled else { return }
+                    results = store.search(query)
+                    searched = true
+                    // Past matches pile up over time, so start at the first one
+                    // from today onwards. Scrolling up shows the past.
+                    if let first = results.first(where: { $0.endDate >= navigation.today }) {
+                        DispatchQueue.main.async { proxy.scrollTo(first.occurrenceKey, anchor: .top) }
                     }
                 }
             }
-        }
-        // Wait a moment after typing stops before searching three years of events.
-        .task(id: query) {
-            try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else { return }
-            results = store.search(query)
-            searched = true
         }
     }
 
