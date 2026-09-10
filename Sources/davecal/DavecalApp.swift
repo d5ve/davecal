@@ -41,6 +41,6 @@ struct DavecalApp: App {
                     .environment(store)
             }
         }
-        .defaultSize(width: 560, height: 640)
+        .defaultSize(width: 600, height: 720)
     }
 }
