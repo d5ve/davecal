@@ -6,14 +6,32 @@ enum ViewMode: String, CaseIterable {
     case week = "Week"
 }
 
-/// Which period is on screen: month or week, and around which date.
+/// Which period is on screen: month or week, and around which date. Also
+/// keeps the current time, so "today" and the now-line stay right while the
+/// app is left open.
 @MainActor
 @Observable
 final class CalendarNavigation {
     var mode: ViewMode = .month
     var anchor: Date = .now
+    private(set) var now: Date = .now
 
     private let calendar = Calendar.current
+
+    init() {
+        // Tick every half minute for the now-line, and jump straight away
+        // when the system says the day has changed (midnight, wake, zone).
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.now = .now }
+        }
+        NotificationCenter.default.addObserver(
+            forName: .NSCalendarDayChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.now = .now }
+        }
+    }
+
+    var today: Date { calendar.startOfDay(for: now) }
 
     var month: Date { calendar.startOfMonth(for: anchor) }
     var weekStart: Date { calendar.startOfWeek(for: anchor) }
@@ -24,15 +42,15 @@ final class CalendarNavigation {
 
     var showsToday: Bool {
         switch mode {
-        case .month: calendar.isDate(anchor, equalTo: .now, toGranularity: .month)
-        case .week: weekStart == calendar.startOfWeek(for: .now)
+        case .month: calendar.isDate(anchor, equalTo: today, toGranularity: .month)
+        case .week: weekStart == calendar.startOfWeek(for: today)
         }
     }
 
     /// Where a new event goes when nothing more specific was chosen: today if
     /// it's on screen, otherwise the first day of the period.
     var newEventDay: Date {
-        showsToday ? calendar.startOfDay(for: .now) : periodStart
+        showsToday ? today : periodStart
     }
 
     var title: String {
@@ -50,7 +68,8 @@ final class CalendarNavigation {
     }
 
     func goToToday() {
-        anchor = .now
+        now = .now
+        anchor = now
     }
 
     /// Move forward or back by whole months or weeks.

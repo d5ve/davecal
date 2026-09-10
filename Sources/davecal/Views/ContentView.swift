@@ -4,6 +4,9 @@ struct ContentView: View {
     @Environment(CalendarStore.self) private var store
     @Environment(CalendarNavigation.self) private var navigation
     @Environment(\.openWindow) private var openWindow
+    @State private var query = ""
+
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
         @Bindable var navigation = navigation
@@ -11,16 +14,23 @@ struct ContentView: View {
             SidebarView()
         } detail: {
             VStack(spacing: 0) {
-                header
                 if store.denied { deniedBanner }
-                switch navigation.mode {
-                case .month: MonthView(month: navigation.month)
-                case .week: WeekView(weekStart: navigation.weekStart)
+                if isSearching {
+                    SearchResultsView(query: query) { query = "" }
+                } else {
+                    header
+                    switch navigation.mode {
+                    case .month: MonthView(month: navigation.month)
+                    case .week: WeekView(weekStart: navigation.weekStart)
+                    }
                 }
             }
         }
+        .searchable(text: $query, placement: .toolbar, prompt: "Search events")
         .frame(minWidth: 1100, minHeight: 650)
         .task { await store.requestAccess() }
+        // A new day: the sidebar's Upcoming list and "Tomorrow" labels move on.
+        .onChange(of: navigation.today) { store.reload() }
     }
 
     private var header: some View {

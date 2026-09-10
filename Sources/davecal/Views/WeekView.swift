@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WeekView: View {
     @Environment(CalendarStore.self) private var store
+    @Environment(CalendarNavigation.self) private var navigation
     @Environment(\.openWindow) private var openWindow
     let weekStart: Date
 
@@ -30,6 +31,7 @@ struct WeekView: View {
                         ForEach(days, id: \.self) { day in
                             DayColumn(
                                 day: day,
+                                now: navigation.now,
                                 events: (byDay[day] ?? []).filter { !$0.isAllDay },
                                 hourHeight: hourHeight,
                                 openNew: { openWindow(id: "event", value: EventRequest.newEvent(at: $0)) },
@@ -63,7 +65,7 @@ struct WeekView: View {
         HStack(spacing: 0) {
             Spacer().frame(width: labelWidth)
             ForEach(days, id: \.self) { day in
-                let today = calendar.isDateInToday(day)
+                let today = day == navigation.today
                 VStack(spacing: 0) {
                     Text(day.formatted(.dateTime.weekday(.abbreviated)))
                         .font(.system(size: 13, weight: .semibold))
@@ -126,6 +128,7 @@ struct WeekView: View {
 /// One day's column of timed events, drawn to scale.
 struct DayColumn: View {
     let day: Date
+    let now: Date
     let events: [EKEvent]
     let hourHeight: CGFloat
     let openNew: (Date) -> Void
@@ -167,9 +170,9 @@ struct DayColumn: View {
                         .offset(x: 3 + CGFloat(p.lane) * width, y: top)
                         .openable { openEvent(p.event) }
                 }
-                if calendar.isDateInToday(day) {
+                if calendar.isDate(now, inSameDayAs: day) {
                     Rectangle().fill(.red).frame(height: 2)
-                        .offset(y: y(for: .now, dayStart: dayStart))
+                        .offset(y: y(for: now, dayStart: dayStart))
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }

@@ -99,6 +99,22 @@ final class CalendarStore {
         return a.startDate < b.startDate
     }
 
+    /// Events whose title, location or notes contain the text, from a year
+    /// back to two years ahead, respecting the sidebar settings.
+    func search(_ text: String) -> [EKEvent] {
+        let needle = text.trimmingCharacters(in: .whitespaces)
+        guard authorized, !needle.isEmpty else { return [] }
+        let start = calendar.date(byAdding: .year, value: -1, to: .now)!
+        let end = calendar.date(byAdding: .year, value: 2, to: .now)!
+        return fetch(from: start, to: end)
+            .filter { shows($0) }
+            .filter { event in
+                [event.title, event.location, event.notes]
+                    .contains { $0?.localizedCaseInsensitiveContains(needle) ?? false }
+            }
+            .sorted { $0.startDate < $1.startDate }
+    }
+
     /// Find one occurrence of an event. Repeating events share an identifier,
     /// so the start time picks out which occurrence.
     func occurrence(identifier: String, startingAt start: Date) -> EKEvent? {

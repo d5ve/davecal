@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MonthView: View {
     @Environment(CalendarStore.self) private var store
+    @Environment(CalendarNavigation.self) private var navigation
     @Environment(\.openWindow) private var openWindow
     let month: Date
 
@@ -36,7 +37,7 @@ struct MonthView: View {
     private var grid: some View {
         let days = gridDays
         let byDay = store.eventsByDay
-        let today = calendar.startOfDay(for: .now)
+        let today = navigation.today
         return VStack(spacing: 1) {
             ForEach(0..<6, id: \.self) { row in
                 HStack(spacing: 1) {
