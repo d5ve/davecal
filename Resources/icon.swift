@@ -1,4 +1,4 @@
-// Draws Resources/icon.png. Run: swiftc -O Resources/icon.swift -o /tmp/mkicon && /tmp/mkicon Resources/icon.png && sips -z 1024 1024 Resources/icon.png
+// Draws Resources/icon.png. Run: swiftc -O Resources/icon.swift -o .build/mkicon && .build/mkicon Resources/icon.png && sips -z 1024 1024 Resources/icon.png
 
 import AppKit
 
@@ -56,7 +56,7 @@ let attrs: [NSAttributedString.Key: Any] = [
     .foregroundColor: NSColor(white: 0.13, alpha: 1),
     .paragraphStyle: para,
 ]
-let text = NSAttributedString(string: "9", attributes: attrs)
+let text = NSAttributedString(string: "69", attributes: attrs)
 let textRect = CGRect(x: page.minX, y: page.minY + 40, width: page.width, height: 400)
 text.draw(in: textRect)
 
