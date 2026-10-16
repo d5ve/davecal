@@ -1,3 +1,5 @@
+<img src="Resources/icon.png" width="128" alt="davecal icon" align="right">
+
 # davecal
 
 A small native macOS calendar written for my own use. The aim is to be
