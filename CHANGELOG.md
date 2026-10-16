@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3 — 2026-10-17
+
+- Nice.
+
 ## 1.2 — 2026-09-10
 
 - Search events from the toolbar (Cmd F). Results start at today.
