@@ -1,6 +1,6 @@
-<img src="Resources/icon.png" width="128" alt="davecal icon" align="right">
-
 # davecal
+
+<img src="Resources/icon.png" width="128" alt="davecal icon" align="right">
 
 A small native macOS calendar written for my own use. The aim is to be
 easier for me to read than the built-in Calendar app.
